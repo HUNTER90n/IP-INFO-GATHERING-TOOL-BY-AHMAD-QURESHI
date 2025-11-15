@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IP INFO SCANNER V3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ===== MATRIX BACKGROUND ===== */
+body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    font-family: "Courier New", monospace;
+    color: #00ff99;
+    overflow-x: hidden;
+}
+
+canvas#matrix {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* ===== CARD UI ===== */
+.container {
+    max-width: 650px;
+    margin: 40px auto;
+    padding: 25px;
+    background: rgba(0, 255, 120, 0.08);
+    border: 1px solid #00ff99;
+    box-shadow: 0 0 20px #00ff9960;
+    border-radius: 12px;
+}
+
+h2 {
+    text-align: center;
+    text-shadow: 0 0 10px #00ff99;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    background: #001a0f;
+    border: 1px solid #00ff99;
+    color: #00ff99;
+    border-radius: 6px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: #00ff99;
+    color: black;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #00cc77;
+}
+
+#output {
+    margin-top: 20px;
+    padding: 12px;
+    border: 1px solid #00ff99;
+    border-radius: 8px;
+    background: #000e08;
+    min-height: 120px;
+    white-space: pre-wrap;
+}
+
+#map {
+    margin-top: 20px;
+    width: 100%;
+    height: 250px;
+    border-radius: 12px;
+    border: 1px solid #00ff99;
+    display: none;
+}
+
+/* Terminal blinking cursor */
+.cursor {
+    animation: blink 0.7s infinite;
+}
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- MATRIX CANVAS -->
+<canvas id="matrix"></canvas>
+
+<div class="container">
+    <h2>IP INFO SCANNER V3 🔍</h2>
+
+    <input id="ipInput" placeholder="Enter IP (blank = auto detect)">
+    <button onclick="lookupIP()">SCAN NOW</button>
+
+    <div id="output">Awaiting command<span class="cursor">▉</span></div>
+
+    <iframe id="map"></iframe>
+</div>
+
+<script>
+/* ========= MATRIX ANIMATION ========= */
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
+
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*/+=<>".split("");
+const drops = Array(Math.floor(canvas.width / 12)).fill(1);
+
+function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#00ff99";
+    ctx.font = "14px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+        const char = letters[Math.floor(Math.random() * letters.length)];
+        ctx.fillText(char, i * 12, drops[i] * 14);
+
+        if (drops[i] * 14 > canvas.height && Math.random() > 0.95) drops[i] = 0;
+        drops[i]++;
+    }
+}
+setInterval(drawMatrix, 40);
+
+/* ========= MAIN IP LOOKUP FUNCTION ========= */
+async function lookupIP() {
+    const ip = document.getElementById("ipInput").value.trim();
+    const output = document.getElementById("output");
+    const map = document.getElementById("map");
+
+    output.innerHTML = "🔍 Scanning target...";
+
+    try {
+        const url = `https://ip-info.bjcoderx.workers.dev/${ip ? `?ip=${ip}` : ""}`;
+        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+        const res = await fetch(proxy);
+        if (!res.ok) throw new Error("Proxy failed");
+
+        const raw = await res.json();
+        const data = JSON.parse(raw.contents);
+
+        output.innerHTML =
+`🎯 SCAN COMPLETE
+──────────────────────────
+✔️ IP: ${data.ip}
+✔️ Continent: ${data.continent_name} (${data.continent_code})
+✔️ Country: ${data.country_name} ${data.country_emoji}
+✔️ Capital: ${data.country_capital}
+✔️ State: ${data.state_prov}
+✔️ District: ${data.district}
+✔️ City: ${data.city}
+✔️ Zip: ${data.zipcode}
+✔️ ISP: ${data.isp}
+✔️ Org: ${data.organization}
+✔️ Lat/Lon: ${data.latitude}, ${data.longitude}
+✔️ Currency: ${data.currency.name} (${data.currency.code}) ${data.currency.symbol}
+✔️ Timezone: ${data.time_zone.name}
+✔️ Local Time: ${data.time_zone.current_time}
+──────────────────────────
+👨‍💻 Dev: Ahmad Bilal Qureshi
+📢 Channel: DX_Hacks
+`;
+
+        map.style.display = "block";
+        map.src = `https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=12&output=embed`;
+
+    } catch (err) {
+        output.textContent = "❌ Network error — API unreachable.";
+    }
+}
+</script>
+
+</body>
+</html>
